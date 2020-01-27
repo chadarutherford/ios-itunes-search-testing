@@ -10,6 +10,19 @@ import Foundation
 
 class SearchResultController {
     
+    // --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    // MARK: - Properties
+    let baseURL = URL(string: "https://itunes.apple.com/search")!
+    var searchResults: [SearchResult] = []
+    let networkLoader: NetworkDataLoader
+    var error: Error?
+    
+    init(networkLoader: NetworkDataLoader = URLSession.shared) {
+        self.networkLoader = networkLoader
+    }
+    
+    // --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    // MARK: - Helper Methods
     func performSearch(for searchTerm: String, resultType: ResultType, completion: @escaping () -> Void) {
         
         var urlComponents = URLComponents(url: baseURL, resolvingAgainstBaseURL: true)
@@ -23,7 +36,7 @@ class SearchResultController {
         var request = URLRequest(url: requestURL)
         request.httpMethod = HTTPMethod.get.rawValue
         
-        let dataTask = URLSession.shared.dataTask(with: request) { (data, _, error) in
+        networkLoader.loadData(using: request) { (data, _, error) in
             
             if let error = error { NSLog("Error fetching data: \(error)") }
             guard let data = data else { completion(); return }
@@ -34,13 +47,11 @@ class SearchResultController {
                 self.searchResults = searchResults.results
             } catch {
                 print("Unable to decode data into object of type [SearchResult]: \(error)")
+                self.error = error
             }
-            
-            completion()
+            DispatchQueue.main.async {
+                completion()
+            }
         }
-        dataTask.resume()
     }
-    
-    let baseURL = URL(string: "https://itunes.apple.com/search")!
-    var searchResults: [SearchResult] = []
 }
